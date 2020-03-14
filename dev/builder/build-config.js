@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2019, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -31,25 +31,31 @@ var CKBUILDER_CONFIG = {
 		'node_modules',
 		'package.json',
 		'README.md',
+		'CHANGES.md',
+		'LICENSE.md',
 		'tests'
 	],
 	plugins: {
 		a11yhelp: 1,
-		about: 1,
+		autogrow : 1,
 		basicstyles: 1,
-		bidi: 1,
 		blockquote: 1,
 		clipboard: 1,
+		codeTag : 1,
+		codesnippet : 1,
 		colorbutton: 1,
 		colordialog: 1,
 		copyformatting: 1,
 		contextmenu: 1,
+		dialog : 1,
 		dialogadvtab: 1,
+		dialogui : 1,
 		div: 1,
 		elementspath: 1,
 		enterkey: 1,
 		entities: 1,
 		filebrowser: 1,
+		filetools : 1,
 		find: 1,
 		flash: 1,
 		floatingspace: 1,
@@ -93,7 +99,15 @@ var CKBUILDER_CONFIG = {
 		templates: 1,
 		toolbar: 1,
 		undo: 1,
+		uploadfile: 1,
 		uploadimage: 1,
+		uploadimage : 1,
+		uploadwidget : 1,
+		widget : 1,
 		wysiwygarea: 1
+	},
+	languages : {
+		'en' : 1,
+		'zh-cn' : 1
 	}
 };
