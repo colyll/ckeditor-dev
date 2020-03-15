@@ -16,7 +16,7 @@
             });
             // alert('dedepage!');
             // Register the toolbar button.
-            editor.ui.addButton( 'MyPage',
+            editor.ui.addButton( 'dedepage',
             {
                 label : '插入分页符',
                 command : 'dedepage'
