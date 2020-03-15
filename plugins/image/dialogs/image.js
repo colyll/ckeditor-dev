@@ -471,7 +471,7 @@
 					}
 				},
 				onLoad: function() {
-					if ( dialogType != 'image' )
+					if ( dialogType !== 'image' )
 						this.hidePage( 'Link' ); //Hide Link tab.
 					var doc = this._.element.getDocument();
 
@@ -481,6 +481,17 @@
 					}
 
 					this.commitContent = commitContent;
+
+					//change Upload mode
+					if ( editor.config.saveto !== 'local' ) {
+						this.hidePage('Upload');
+						window.upload_domain = editor.config.UploadDomain;
+						window.bucket_domain = editor.config.BucketDomain;
+						window.plupload_flash_swf_url = editor.config.PluploadFlashSwfUrl;
+						savetocloud();
+					} else {
+						this.hidePage('QUpload');
+					}
 				},
 				onHide: function() {
 					if ( this.preview )
@@ -567,6 +578,10 @@
 									if ( type == IMAGE && ( this.getValue() || this.isChanged() ) ) {
 										element.data( 'cke-saved-src', this.getValue() );
 										element.setAttribute( 'src', this.getValue() );
+										if ( editor.config.lazyload ) {
+											element.setAttribute( editor.config.lazyloadAttribute , this.getValue() );
+											element.setAttribute( 'class', editor.config.lazyloadCss );
+										}
 									} else if ( type == CLEANUP ) {
 										element.setAttribute( 'src', '' ); // If removeAttribute doesn't work.
 										element.removeAttribute( 'src' );
@@ -987,7 +1002,7 @@
 										'<a href="javascript:void(0)" target="_blank" onclick="return false;" id="' + previewLinkId + '">' +
 										'<img id="' + previewImageId + '" alt="" /></a>' +
 									// jscs:disable maximumLineLength
-										( editor.config.image_previewText || 'Image Preview. ') +
+									( editor.config.image_previewText || 'Image Preview. ' ) +
 									// jscs:enable maximumLineLength
 									'</td></tr></table></div></div>'
 							} ]
@@ -1084,6 +1099,15 @@
 						filebrowser: 'info:txtUrl',
 						label: editor.lang.image.btnUpload,
 						'for': [ 'Upload', 'upload' ]
+					} ]
+				},
+				{
+					id: 'QUpload',
+					hidden: false,
+					label: editor.lang.image.upload,
+					elements: [ {
+						type: 'html',
+						html:'<div id="container"><em id="fileinfo"></em><a href="javascript:void(0)" id="setfile">[点击选择文件]</a><a href="javascript:void(0)" id="uploadfile">[ 上传 ]</a></div>'
 					} ]
 				},
 				{
@@ -1267,3 +1291,99 @@
 		return imageDialog( editor, 'imagebutton' );
 	} );
 } )();
+
+
+function savetocloud(){
+	function set_upload_param(up, file){
+		var new_multipart_params;
+		time_ms = new Date().getTime();
+		if ( window.saveto === 'qiniu' ){
+			new_multipart_params = {
+				'token': window.uptoken,
+				'key' : window.time_ms +'_'+ file.name
+			};
+		}else if ( window.saveto === 'alioss' ){
+			new_multipart_params = {
+				'key' : window.path_key + window.time_ms +'_'+ file.name,
+				'policy': window.policyBase64,
+				'OSSAccessKeyId': window.accessid,
+				'success_action_status' : '200',
+				'signature': window.signature
+			};
+		}
+
+		uploader.setOption({
+			'url': window.upload_domain,
+			'multipart_params': new_multipart_params
+		});
+	};
+
+	var uploader = new plupload.Uploader({
+		runtimes: "html5,flash,html4",
+		browse_button: "setfile",
+		url: '',
+		container: "container",
+		max_file_size: "5120mb",
+		filters: {
+			mime_types: [{
+				title: "Image files",
+				extensions: "jpeg,jpg,gif,png,wbmp"
+			},
+				{
+					title: "Video files",
+					extensions: "ogg,mpeg4,webm,avi,rmvb,flv,rm,mp4,wmv,mov,mkv,divx"
+				},
+				{
+					title: "Music files",
+					extensions: "wap,mp3,ape,flac,m4a,mid"
+				},
+				{
+					title: "Zip files",
+					extensions: "zip,tar,rar,tar.gz,bz2,xz,7z,iso"
+				}],
+			prevent_duplicates : true
+		},
+		flash_swf_url: window.plupload_flash_swf_url,
+		max_retries: 3,
+		dragdrop: true,
+		drop_element: "container",
+		chunk_size: "4mb",
+		auto_start: false,
+		init: {
+			"PostInit": function() {
+				document.getElementById("uploadfile").onclick = function() {
+					uploader.start();
+					return false
+				}
+			},
+			"FilesAdded": function(up, files) {
+				plupload.each(files,
+					function(file) {
+						document.getElementById("fileinfo").innerHTML += '<div id="' + file.id + '">' + file.name + "&nbsp;&nbsp;&nbsp;(" + plupload.formatSize(file.size) + ")&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b></b>	<i></i></div><br>";
+					})
+			},
+			"BeforeUpload": function(up, file) {
+				set_upload_param(up, file);
+			},
+			"UploadProgress": function(up, file) {
+				document.getElementById(file.id).getElementsByTagName("b")[0].innerHTML = "<span>" + file.percent + "%</span>"
+			},
+			"FileUploaded": function(up, file, info) {
+				var sourceLink;
+				var res = JSON.parse(info.response);
+				if ( window.saveto === 'alioss' ){
+					if ( info.status === 200 ){
+						sourceLink = bucket_domain + "/" + window.path_key + window.time_ms +'_'+ file.name;
+					}
+				}else{
+					sourceLink = bucket_domain + "/" + res.key;
+				}
+				document.getElementById(file.id).getElementsByTagName("i")[0].innerHTML = sourceLink;
+				window.CKEDITOR.tools.callFunction(fnidnum, sourceLink, 'ok');
+			},
+			"Error": function(up, err, errTip) {},
+			"UploadComplete": function() {}
+		}
+	});
+	uploader.init();
+}
