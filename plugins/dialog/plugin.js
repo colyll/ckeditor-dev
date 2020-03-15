@@ -949,7 +949,7 @@ CKEDITOR.DIALOG_STATE_BUSY = 2;
 					}
 				}
 
-				if ( !enableElements || ( requiredContent && !this._.editor.activeFilter.check( requiredContent ) ) ) {
+				if ( requiredContent && !this._.editor.activeFilter.check( requiredContent ) ) {
 					tab[ 0 ].addClass( 'cke_dialog_tab_disabled' );
 				} else {
 					tab[ 0 ].removeClass( 'cke_dialog_tab_disabled' );

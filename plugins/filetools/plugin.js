@@ -52,19 +52,38 @@
 					configXhrHeaders = editor.config.fileTools_requestHeaders,
 					header;
 
+				// Append token preventing CSRF attacks.
+				if ( this.config.saveto === 'qiniu' ) {
+					$formData.append( 'token', uptoken );
+				} else if ( this.config.saveto === 'alioss' ) {
+					$formData.append( 'policy' , window.policyBase64 );
+					$formData.append( 'OSSAccessKeyId' , window.accessid );
+					$formData.append( 'success_action_status' , '200' );
+					$formData.append( 'signature' , window.signature );
+				} else {
+					$formData.append( 'ckCsrfToken', CKEDITOR.tools.getCsrfToken() );
+				}
+
 				for ( var name in requestData ) {
 					var value = requestData[ name ];
 
 					// Treating files in special way
 					if ( typeof value === 'object' && value.file ) {
-						$formData.append( name, value.file, value.name );
+						if ( this.config.saveto !== 'local' ) {
+							if ( this.config.saveto === 'alioss' ){
+								$formData.append( 'key', path_key + value.file.lastModified + '_' + value.name );
+							}else{
+								$formData.append( 'key', value.file.lastModified + '_' + value.name );
+							}
+							$formData.append( 'file', value.file, value.name );// AliOSS MUST be added 'file' at the last one.
+						} else {
+							$formData.append( name, value.file, value.file.lastModified + '_' + value.name );
+						}
 					}
 					else {
 						$formData.append( name, value );
 					}
 				}
-				// Append token preventing CSRF attacks.
-				$formData.append( 'ckCsrfToken', CKEDITOR.tools.getCsrfToken() );
 
 				if ( configXhrHeaders ) {
 					for ( header in configXhrHeaders ) {
@@ -96,7 +115,12 @@
 					data = evt.data;
 
 				try {
-					var response = JSON.parse( xhr.responseText );
+					var response;
+					if ( this.config.saveto === 'alioss' ) {
+						response = JSON.parse( '{"hash":"noset","key":"'+ path_key +  fileLoader.file.lastModified + '_' + fileLoader.fileName +'"}' );
+					} else {
+						response = JSON.parse( xhr.responseText );
+					}
 
 					// Error message does not need to mean that upload finished unsuccessfully.
 					// It could mean that ex. file name was changes during upload due to naming collision.
@@ -105,7 +129,7 @@
 					}
 
 					// But !uploaded means error.
-					if ( !response.uploaded ) {
+					if ( !response.uploaded && this.config.saveto === 'local' ) {
 						evt.cancel();
 					} else {
 						for ( var i in response ) {
@@ -113,11 +137,16 @@
 						}
 					}
 				} catch ( err ) {
-					// Response parsing error.
-					data.message = fileLoader.lang.filetools.responseError;
-					CKEDITOR.warn( 'filetools-response-error', { responseText: xhr.responseText } );
+					if ( this.config.saveto === 'alioss') {
+						// AliOSS will not return data
+						CKEDITOR.warn( 'filetools-response-error', { responseText: '老铁，我可是阿里云OSS，上传成功了找我要数据，搞笑么你！！自己做了什么不知道吗？？' } );
+					} else {
+						// Response parsing error.
+						data.message = fileLoader.lang.filetools.responseError;
+						CKEDITOR.warn( 'filetools-response-error', { responseText: xhr.responseText } );
 
-					evt.cancel();
+						evt.cancel();
+					}
 				}
 			}, null, null, 999 );
 		}
@@ -640,8 +669,14 @@
 
 					for ( var i = 0; i < valuesToCopy.length; i++ ) {
 						var key = valuesToCopy[ i ];
-						if ( typeof data[ key ] === 'string' ) {
-							loader[ key ] = data[ key ];
+						if ( key === 'url' && saveto !== 'local' ) {
+							if ( typeof data[ 'key' ] === 'string' ) {
+								loader[ 'url' ] = bucket_domain + '/' + data[ 'key' ];
+							}
+						} else {
+							if ( typeof data[ key ] === 'string' ) {
+								loader[ key ] = data[ key ];
+							}
 						}
 					}
 
@@ -843,14 +878,19 @@
 		getUploadUrl: function( config, type ) {
 			var capitalize = CKEDITOR.tools.capitalize;
 
-			if ( type && config[ type + 'UploadUrl' ] ) {
+			if ( config.saveto !== 'local' ) {
+				window.bucket_domain = config.BucketDomain;
+				window.saveto = config.saveto;
+				return config.UploadDomain;
+			} else if ( type && config[ type + 'UploadUrl' ] ) {
 				return config[ type + 'UploadUrl' ];
 			} else if ( config.uploadUrl ) {
 				return config.uploadUrl;
 			} else if ( type && config[ 'filebrowser' + capitalize( type, 1 ) + 'UploadUrl' ] ) {
-				return config[ 'filebrowser' + capitalize( type, 1 ) + 'UploadUrl' ] + '&responseType=json';
+				return config[ 'filebrowser' + capitalize( type, 1 ) + 'UploadUrl' ] + '?responseType=json';
 			} else if ( config.filebrowserUploadUrl ) {
-				return config.filebrowserUploadUrl + '&responseType=json';
+				if (config.filebrowserUploadUrl.indexOf("?") === -1) config.filebrowserUploadUrl += "?"; else config.filebrowserUploadUrl += "&";
+				return config.filebrowserUploadUrl + 'responseType=json';
 			}
 
 			return null;

@@ -411,7 +411,14 @@
 	}
 
 	function setUrl( fileUrl, data ) {
-		var dialog = this._.filebrowserSe.getDialog(),
+		var dialog;
+		if( this.config.saveto !== 'local' ) {
+			dialog = CKEDITOR.dialog.getCurrent();
+			dialog.setValueOf('info','txtUrl', fileUrl );
+			return false;
+		}
+
+		dialog = this._.filebrowserSe.getDialog(),
 			targetInput = this._.filebrowserSe[ 'for' ],
 			onSelect = this._.filebrowserSe.filebrowser.onSelect;
 
@@ -436,6 +443,7 @@
 		requires: 'popup,filetools',
 		init: function( editor ) {
 			editor._.filebrowserFn = CKEDITOR.tools.addFunction( setUrl, editor );
+			window.fnidnum = editor._.filebrowserFn;
 			editor.on( 'destroy', function() {
 				CKEDITOR.tools.removeFunction( this._.filebrowserFn );
 			} );

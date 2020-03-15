@@ -50,6 +50,10 @@
 				return;
 			}
 
+			var lazyload = editor.config.lazyload;
+			var lazyloadCss = editor.config.lazyloadCss;
+			var lazyloadAttribute = editor.config.lazyloadAttribute;
+
 			var fileTools = CKEDITOR.fileTools,
 				uploadUrl = fileTools.getUploadUrl( editor.config, 'image' );
 
@@ -59,7 +63,7 @@
 
 			// Handle images which are available in the dataTransfer.
 			fileTools.addUploadWidget( editor, 'uploadimage', {
-				supportedTypes: /image\/(jpeg|png|gif|bmp)/,
+				supportedTypes: /image\/(jpeg|png|gif|bmp|webp)/,
 
 				uploadUrl: uploadUrl,
 
@@ -85,9 +89,17 @@
 						height = upload.responseData.height || $img.naturalHeight;
 
 					// Set width and height to prevent blinking.
-					this.replaceWith( '<img src="' + upload.url + '" ' +
-						'width="' + width + '" ' +
-						'height="' + height + '">' );
+					if ( lazyload ) {
+						this.replaceWith( '<img src="' + upload.url + '" ' +
+							' class ="'+ lazyloadCss + '" ' +
+							lazyloadAttribute +'="' + upload.url + '" ' +
+							'width="' + width + '" ' +
+							'height="' + height + '">' );
+					} else {
+						this.replaceWith( '<img src="' + upload.url + '" ' +
+							'width="' + width + '" ' +
+							'height="' + height + '">' );
+					}
 				}
 			} );
 

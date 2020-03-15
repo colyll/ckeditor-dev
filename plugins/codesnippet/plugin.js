@@ -101,7 +101,8 @@
 						sql: 'SQL',
 						vbscript: 'VBScript',
 						xhtml: 'XHTML',
-						xml: 'XML'
+						xml: 'XML',
+						text: 'Text'
 					},
 
 					init: function( callback ) {
@@ -294,18 +295,19 @@
 			lang = editor.lang.codesnippet;
 
 		editor.widgets.add( 'codeSnippet', {
-			allowedContent: 'pre; code(language-*)',
+			allowedContent: 'pre; em(language); code(language-*)',
 			// Actually we need both - pre and code, but ACF does not make it possible
 			// to defire required content with "and" operator.
 			requiredContent: 'pre',
 			styleableElements: 'pre',
-			template: '<pre><code class="' + codeClass + '"></code></pre>',
+			template: '<pre><em class="language">Text</em><code class="' + codeClass + '"></code></pre>',
 			dialog: 'codeSnippet',
 			pathName: lang.pathName,
 			mask: true,
 
 			parts: {
 				pre: 'pre',
+				em: 'em',
 				code: 'code'
 			},
 
@@ -345,6 +347,7 @@
 				if ( newData.lang ) {
 					// Apply new .language-* class.
 					this.parts.code.addClass( 'language-' + newData.lang );
+					this.parts.em.setText(newData.lang);
 
 					this.highlight();
 				}
@@ -361,7 +364,7 @@
 				var childrenArray = getNonEmptyChildren( el ),
 					code;
 
-				if ( childrenArray.length != 1 || ( code = childrenArray[ 0 ] ).name != 'code' )
+				if ( childrenArray.length != 2 || (code = childrenArray[ 1 ]).name != 'code' )
 					return;
 
 				// Upcast <code> with text only: https://dev.ckeditor.com/ticket/11926#comment:4
@@ -412,7 +415,7 @@
 				curNode;
 
 			// Filter out empty text nodes.
-			for ( var i = preChildrenList.length - 1; i >= 0; i-- ) {
+			for ( var i = 0; i <= preChildrenList.length - 1; i++ ) {
 				curNode = preChildrenList[ i ];
 
 				if ( curNode.type != CKEDITOR.NODE_TEXT || !curNode.value.match( whitespaceOnlyRegex ) )
